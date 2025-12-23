@@ -31,7 +31,20 @@ export async function GET(request: NextRequest) {
       }
     )
     
-    await supabase.auth.exchangeCodeForSession(code)
+    try {
+      const result = await supabase.auth.exchangeCodeForSession(code)
+
+      if (result.error) {
+        console.error('Supabase exchange error:', result.error)
+        // Redirect back to login with a short error code for diagnostics
+        return NextResponse.redirect(new URL('/login?error=exchange_failed', request.url))
+      }
+
+      console.log('Supabase exchange success for code source:', request.url)
+    } catch (err) {
+      console.error('Supabase exchange exception:', err)
+      return NextResponse.redirect(new URL('/login?error=exchange_exception', request.url))
+    }
   }
 
   // URL para redirigir después de login exitoso
