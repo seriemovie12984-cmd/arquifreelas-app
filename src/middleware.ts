@@ -1,18 +1,45 @@
-﻿import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+﻿import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
 
-  // Refresh session si existe
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            req.cookies.set(name, value)
+          )
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
   const {
     data: { session },
   } = await supabase.auth.getSession()
 
   // Rutas protegidas que requieren autenticación
-  const protectedRoutes = ['/dashboard', '/projetos']
+  const protectedRoutes = ['/dashboard', '/projetos', '/admin']
   const isProtectedRoute = protectedRoutes.some((route) =>
     req.nextUrl.pathname.startsWith(route)
   )
@@ -29,13 +56,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
-  return res
+  return response
 }
 
 export const config = {
   matcher: [
     '/dashboard/:path*',
     '/projetos/:path*',
+    '/admin/:path*',
     '/login',
     '/cadastro',
   ],

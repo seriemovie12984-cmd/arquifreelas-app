@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
 interface UserProfile {
@@ -21,7 +21,7 @@ interface UserProfile {
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +87,7 @@ export default function AdminPage() {
             newToday,
           });
         }
-      } catch (err) {
+      } catch {
         setError('Error al cargar datos');
       } finally {
         setLoadingUsers(false);

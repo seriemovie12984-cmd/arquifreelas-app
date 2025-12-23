@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
 import { useAuth } from '@/hooks/useAuth';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@/lib/supabase/client';
 
 interface UserProfile {
   id: string;
@@ -19,7 +19,7 @@ interface UserProfile {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
