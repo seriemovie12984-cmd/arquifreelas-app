@@ -4,35 +4,64 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
+import { useAuth } from '@/hooks/useAuth';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  role: string;
+  subscription_status: string | null;
+}
 
-type User = { id?: number | string; name?: string; email?: string; type?: string; };
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading, signOut } = useAuth();
+  const supabase = createClientComponentClient();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
+    if (!loading && !user) {
       router.push('/login');
       return;
     }
-    setUser(JSON.parse(userData));
-  }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
+    // Cargar perfil del usuario
+    const loadProfile = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (data) {
+          setProfile(data);
+        }
+      }
+    };
+
+    loadProfile();
+  }, [user, loading, router, supabase]);
+
+  const handleLogout = async () => {
+    await signOut();
     router.push('/');
   };
 
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
       </div>
     );
   }
+
+  const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
+  const userAvatar = user.user_metadata?.avatar_url || user.user_metadata?.picture;
 
   return (
     <main className="min-h-screen bg-gray-100">
@@ -45,7 +74,18 @@ export default function DashboardPage() {
           <span className="text-2xl font-bold text-gray-800">ArquiFreelas</span>
         </Link>
         <div className="flex items-center gap-4">
-          <span className="text-gray-600">OlÃ¡, <span className="font-semibold">{user.name}</span></span>
+          {userAvatar && (
+            <img src={userAvatar} alt="" className="w-10 h-10 rounded-full" />
+          )}
+          <span className="text-gray-600">Olá, <span className="font-semibold">{userName}</span></span>
+          {profile?.role === 'admin' && (
+            <Link
+              href="/admin"
+              className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-medium"
+            >
+              Admin
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             className="px-4 py-2 border-2 border-red-400 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition font-medium"
@@ -204,15 +244,46 @@ export default function DashboardPage() {
               <h1 className="text-3xl font-bold text-gray-800 mb-8">Meu Perfil</h1>
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <div className="flex items-center gap-6 mb-6">
-                  <div className="w-24 h-24 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
-                    {user.name?.charAt(0).toUpperCase()}
-                  </div>
+                  {userAvatar ? (
+                    <img src={userAvatar} alt="" className="w-24 h-24 rounded-2xl shadow-lg" />
+                  ) : (
+                    <div className="w-24 h-24 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                      {userName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">{userName}</h2>
                     <p className="text-gray-500">{user.email}</p>
-                    <span className="bg-[#22C55E]/10 text-[#22C55E] px-3 py-1 rounded-full text-sm capitalize font-medium">{user.type}</span>
+                    <div className="flex gap-2 mt-2">
+                      <span className="bg-[#22C55E]/10 text-[#22C55E] px-3 py-1 rounded-full text-sm capitalize font-medium">
+                        {profile?.role || 'user'}
+                      </span>
+                      {profile?.subscription_status && (
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          profile.subscription_status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {profile.subscription_status === 'active' ? '✓ Premium' : profile.subscription_status}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                
+                {/* Upgrade to Premium */}
+                {profile?.subscription_status !== 'active' && (
+                  <div className="mt-6 p-4 bg-gradient-to-r from-[#22C55E]/10 to-[#16A34A]/10 rounded-xl border border-[#22C55E]/20">
+                    <h3 className="font-semibold text-gray-800 mb-2">🚀 Upgrade para Premium</h3>
+                    <p className="text-gray-600 text-sm mb-4">Acesse recursos exclusivos e aumente suas chances de conseguir projetos.</p>
+                    <Link 
+                      href="/planos"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-[#22C55E] text-white rounded-lg hover:bg-[#16A34A] transition"
+                    >
+                      Ver Planos
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}
