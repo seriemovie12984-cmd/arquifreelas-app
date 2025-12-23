@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  trailingSlash: true,
+  // SSR habilitado para Railway (necesario para auth y APIs)
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -10,10 +9,13 @@ const nextConfig = {
         hostname: 'images.unsplash.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
     ],
   },
-  basePath: process.env.NODE_ENV === 'production' ? '/arquifreelas-app' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/arquifreelas-app/' : '',
 };
 
 export default nextConfig;

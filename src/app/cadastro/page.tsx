@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function CadastroPage() {
   const router = useRouter();
+  const { signInWithGoogle, user, loading } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,38 +19,56 @@ export default function CadastroPage() {
     phone: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  const handleGoogleSignup = async () => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      console.error('Google signup error:', err);
+      setError('Erro ao cadastrar com Google. Tente novamente.');
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
       setError('As senhas não coincidem.');
-      setLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
     if (formData.password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.');
-      setLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
-    // Simular registro exitoso
-    localStorage.setItem('user', JSON.stringify({
-      id: Date.now().toString(),
-      name: formData.name,
-      email: formData.email,
-      type: formData.userType,
-      cpf: formData.cpf,
-      phone: formData.phone,
-    }));
-    
-    router.push('/dashboard');
-    setLoading(false);
+    // Por ahora solo permitimos registro con Google
+    setError('Por favor, use o cadastro com Google.');
+    setIsSubmitting(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -207,10 +227,10 @@ export default function CadastroPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full py-4 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl font-bold hover:shadow-lg transition disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -236,20 +256,18 @@ export default function CadastroPage() {
           {/* Google Register */}
           <button
             type="button"
-            onClick={() => {
-              localStorage.setItem('user', JSON.stringify({
-                id: 'google-' + Date.now(),
-                name: 'Usuário Google',
-                email: 'usuario@gmail.com',
-                type: 'freelancer',
-                loginMethod: 'google'
-              }));
-              router.push('/dashboard');
-            }}
-            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3"
+            onClick={handleGoogleSignup}
+            disabled={isSubmitting}
+            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3 disabled:opacity-70"
           >
-            <Icons.Google />
-            Cadastrar com Google
+            {isSubmitting ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+            ) : (
+              <>
+                <Icons.Google />
+                Cadastrar com Google
+              </>
+            )}
           </button>
 
           <p className="text-center mt-8 text-gray-500">
