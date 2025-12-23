@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Configuración ArquiFreelas - Supabase</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #1a1a2e; color: white; }
+        h1 { color: #22C55E; }
+        .step { background: #16213e; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .step h2 { color: #22C55E; margin-top: 0; }
+        pre { background: #0f0f23; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 12px; }
+        button { background: #22C55E; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 10px 5px; }
+        button:hover { background: #16A34A; }
+        .success { color: #22C55E; font-weight: bold; }
+        a { color: #22C55E; }
+        .credentials { background: #0f0f23; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .credentials code { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Configuración de ArquiFreelas</h1>
+    
+    <div class="step">
+        <h2>Paso 1: Configurar Google OAuth en Supabase</h2>
+        <p>Haz clic en el botón para abrir la configuración de Supabase:</p>
+        <button onclick="window.open('https://supabase.com/dashboard/project/wfmwbvgntfuivbdudsub/auth/providers', '_blank')">
+            Abrir Configuración de Providers
+        </button>
+        <p>Busca <strong>Google</strong> y pega estos valores:</p>
+        <div class="credentials">
+            <p><strong>Client ID:</strong></p>
+            <code id="clientId">1089613141464-s9rhk3vhest6snjnkajudh1ekstni0eu.apps.googleusercontent.com</code>
+            <button onclick="copyText('clientId')">📋 Copiar</button>
+        </div>
+        <div class="credentials">
+            <p><strong>Client Secret:</strong></p>
+            <code id="clientSecret">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</code>
+            <button onclick="copyText('clientSecret')">📋 Copiar</button>
+        </div>
+        <p>✅ Asegúrate de que el toggle de Google esté <strong>habilitado</strong> y haz clic en <strong>Save</strong>.</p>
+    </div>
+
+    <div class="step">
+        <h2>Paso 2: Ejecutar Migración SQL</h2>
+        <p>Haz clic para abrir el editor SQL de Supabase:</p>
+        <button onclick="window.open('https://supabase.com/dashboard/project/wfmwbvgntfuivbdudsub/sql/new', '_blank')">
+            Abrir Editor SQL
+        </button>
+        <p>Luego haz clic aquí para copiar el SQL:</p>
+        <button onclick="copySQL()">📋 Copiar SQL al Portapapeles</button>
+        <p id="sqlStatus"></p>
+        <details>
+            <summary>Ver SQL completo</summary>
+            <pre id="sqlCode">-- Crear tabla profiles
+CREATE TABLE IF NOT EXISTS profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email text UNIQUE,
+  full_name text,
+  avatar_url text,
+  provider text,
+  stripe_customer_id text UNIQUE,
+  subscription_id text,
+  subscription_status text,
+  role text DEFAULT 'user',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Habilitar RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Políticas
+DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
+CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+CREATE POLICY "Users can insert own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Trigger para crear perfil automáticamente
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, avatar_url, provider, role)
+  VALUES (
+    NEW.id, NEW.email,
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'avatar_url',
+    NEW.raw_app_meta_data->>'provider',
+    'user'
+  ) ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+    avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();</pre>
+        </details>
+    </div>
+
+    <div class="step">
+        <h2>Paso 3: Probar Login</h2>
+        <p>Una vez completados los pasos anteriores, prueba el login:</p>
+        <button onclick="window.open('https://v-production-554b.up.railway.app/login', '_blank')">
+            🚀 Probar Login con Google
+        </button>
+    </div>
+
+    <script>
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text);
+            alert('✅ Copiado al portapapeles!');
+        }
+
+        function copySQL() {
+            const sql = document.getElementById('sqlCode').innerText;
+            navigator.clipboard.writeText(sql);
+            document.getElementById('sqlStatus').innerHTML = '<span class="success">✅ SQL copiado! Ahora pégalo en el editor de Supabase y haz clic en "Run"</span>';
+        }
+    </script>
+</body>
+</html>

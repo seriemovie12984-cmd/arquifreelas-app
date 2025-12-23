@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Icons } from '@/components/Icons';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,48 +9,51 @@ import { useAuth } from '@/hooks/useAuth';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signInWithGoogle, user } = useAuth();
+  const { signInWithGoogle, user, loading } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirigir si ya está autenticado
-  if (user) {
-    const redirect = searchParams.get('redirect') || '/dashboard';
-    router.push(redirect);
-  }
+  useEffect(() => {
+    if (!loading && user) {
+      const redirect = searchParams.get('redirect') || '/dashboard';
+      router.push(redirect);
+    }
+  }, [user, loading, router, searchParams]);
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsSubmitting(true);
+      setError('');
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      console.error('Google login error:', err);
+      setError('Erro ao fazer login com Google. Tente novamente.');
+      setIsSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
     setError('');
 
-    // Simulación de login
-    if (formData.email === 'teste@arquifreelas.com' && formData.password === 'Senha123!') {
-      localStorage.setItem('user', JSON.stringify({
-        id: '1',
-        name: 'Usuário Teste',
-        email: formData.email,
-        type: 'arquiteto'
-      }));
-      router.push('/dashboard');
-    } else if (formData.email && formData.password) {
-      // Aceptar cualquier login para pruebas
-      localStorage.setItem('user', JSON.stringify({
-        id: '2',
-        name: formData.email.split('@')[0],
-        email: formData.email,
-        type: 'freelancer'
-      }));
-      router.push('/dashboard');
-    } else {
-      setError('Por favor, preencha todos os campos.');
-    }
-    setLoading(false);
+    // Por ahora, solo permitimos login con Google
+    setError('Por favor, use o login com Google.');
+    setIsSubmitting(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
+      </div>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -84,6 +87,28 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Google Login Button - Principal */}
+          <button
+            onClick={handleGoogleLogin}
+            disabled={isSubmitting}
+            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3 disabled:opacity-70 mb-6"
+          >
+            {isSubmitting ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+            ) : (
+              <>
+                <Icons.Google />
+                Entrar com Google
+              </>
+            )}
+          </button>
+
+          <div className="my-6 flex items-center">
+            <div className="flex-1 border-t border-gray-200"></div>
+            <span className="px-4 text-gray-400 text-sm">ou</span>
+            <div className="flex-1 border-t border-gray-200"></div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -95,7 +120,6 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition"
                 placeholder="seu@email.com"
-                required
               />
             </div>
 
@@ -109,7 +133,6 @@ export default function LoginPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition"
                 placeholder="••••••••"
-                required
               />
             </div>
 
@@ -125,10 +148,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full py-4 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl font-bold hover:shadow-lg transition disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {loading ? (
+              {isSubmitting ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -144,31 +167,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="my-8 flex items-center">
-            <div clasasync () => {
-              try {
-                setLoading(true);
-                await signInWithGoogle();
-              } catch (err: any) {
-                setError('Erro ao fazer login com Google. Tente novamente.');
-                setLoading(false);
-              }
-            }}
-            disabled={loading}
-            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3 disabled:opacity-70
-                name: 'Usuário Google',
-                email: 'usuario@gmail.com',
-                type: 'freelancer',
-                loginMethod: 'google'
-              }));
-              router.push('/dashboard');
-            }}
-            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3"
-          >
-            <Icons.Google />
-            Entrar com Google
-          </button>
 
           <p className="text-center mt-8 text-gray-500">
             Não tem uma conta?{' '}
