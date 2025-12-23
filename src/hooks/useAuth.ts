@@ -48,10 +48,16 @@ export function useAuth() {
   }, [supabase])
 
   const signInWithGoogle = async () => {
+    // Prefer an explicit site URL if provided to avoid using localhost from dev sessions
+    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : '')
+    const redirectTo = `${siteOrigin}/auth/callback`
+
+    console.log('Starting Google sign-in, redirectTo:', redirectTo)
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo,
       },
     })
 
