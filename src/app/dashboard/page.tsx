@@ -1,0 +1,225 @@
+﻿'use client';
+
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Icons } from '@/components/Icons';
+
+
+type User = { id?: number | string; name?: string; email?: string; type?: string; };
+export default function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (!userData) {
+      router.push('/login');
+      return;
+    }
+    setUser(JSON.parse(userData));
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    router.push('/');
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-100">
+      {/* Navigation */}
+      <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="w-11 h-11 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">
+            AF
+          </div>
+          <span className="text-2xl font-bold text-gray-800">ArquiFreelas</span>
+        </Link>
+        <div className="flex items-center gap-4">
+          <span className="text-gray-600">OlÃ¡, <span className="font-semibold">{user.name}</span></span>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 border-2 border-red-400 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition font-medium"
+          >
+            Sair
+          </button>
+        </div>
+      </nav>
+
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className="w-64 bg-white shadow-lg min-h-[calc(100vh-72px)] p-6">
+          <nav className="space-y-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'overview' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.Chart /> VisÃ£o Geral
+            </button>
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'projects' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.Folder /> Meus Projetos
+            </button>
+            <button
+              onClick={() => setActiveTab('proposals')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'proposals' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.Document /> Propostas
+            </button>
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'messages' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.Message /> Mensagens
+            </button>
+            <button
+              onClick={() => setActiveTab('payments')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'payments' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.Wallet /> Pagamentos
+            </button>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'profile' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
+            >
+              <Icons.User /> Meu Perfil
+            </button>
+            <Link
+              href="/projetos/novo"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl hover:shadow-lg transition mt-6 font-semibold"
+            >
+              <Icons.Plus /> Novo Projeto
+            </Link>
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          {activeTab === 'overview' && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">VisÃ£o Geral</h1>
+              
+              {/* Stats Cards */}
+              <div className="grid md:grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <p className="text-gray-500 text-sm">Projetos Ativos</p>
+                  <p className="text-3xl font-bold text-[#22C55E]">3</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <p className="text-gray-500 text-sm">Propostas Pendentes</p>
+                  <p className="text-3xl font-bold text-orange-500">5</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <p className="text-gray-500 text-sm">Mensagens</p>
+                  <p className="text-3xl font-bold text-blue-500">12</p>
+                </div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <p className="text-gray-500 text-sm">Ganhos do MÃªs</p>
+                  <p className="text-3xl font-bold text-[#22C55E]">R$ 8.500</p>
+                </div>
+              </div>
+
+              {/* Recent Projects */}
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <h2 className="text-xl font-semibold mb-4">Projetos Recentes</h2>
+                <div className="space-y-4">
+                  {[
+                    { title: 'Reforma de Apartamento', status: 'Em andamento', price: 'R$ 5.000' },
+                    { title: 'Projeto de EscritÃ³rio', status: 'Aguardando aprovaÃ§Ã£o', price: 'R$ 15.000' },
+                    { title: 'Casa de Praia', status: 'ConcluÃ­do', price: 'R$ 25.000' },
+                  ].map((project, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition cursor-pointer">
+                      <div>
+                        <p className="font-semibold text-gray-800">{project.title}</p>
+                        <span className={`text-sm px-3 py-1 rounded-full ${
+                          project.status === 'ConcluÃ­do' ? 'bg-green-100 text-green-700' :
+                          project.status === 'Em andamento' ? 'bg-blue-100 text-blue-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {project.status}
+                        </span>
+                      </div>
+                      <span className="font-bold text-[#22C55E] text-lg">{project.price}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'projects' && (
+            <div>
+              <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-bold text-gray-800">Meus Projetos</h1>
+                <Link href="/projetos/novo" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl hover:shadow-lg transition font-semibold">
+                  <Icons.Plus /> Novo Projeto
+                </Link>
+              </div>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <p className="text-gray-500 text-center py-8">VocÃª ainda nÃ£o tem projetos. Crie seu primeiro projeto!</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'proposals' && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">Propostas</h1>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <p className="text-gray-500 text-center py-8">Nenhuma proposta recebida ainda.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'messages' && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">Mensagens</h1>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <p className="text-gray-500 text-center py-8">Nenhuma mensagem ainda.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'payments' && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">Pagamentos</h1>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <p className="text-gray-500 text-center py-8">Nenhum pagamento registrado.</p>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'profile' && (
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">Meu Perfil</h1>
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+                <div className="flex items-center gap-6 mb-6">
+                  <div className="w-24 h-24 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                    {user.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
+                    <p className="text-gray-500">{user.email}</p>
+                    <span className="bg-[#22C55E]/10 text-[#22C55E] px-3 py-1 rounded-full text-sm capitalize font-medium">{user.type}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+
