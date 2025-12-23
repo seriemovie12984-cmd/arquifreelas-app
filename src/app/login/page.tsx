@@ -2,17 +2,26 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Icons } from '@/components/Icons';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signInWithGoogle, user } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Redirigir si ya está autenticado
+  if (user) {
+    const redirect = searchParams.get('redirect') || '/dashboard';
+    router.push(redirect);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,17 +146,17 @@ export default function LoginPage() {
           </form>
 
           <div className="my-8 flex items-center">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="px-4 text-gray-400 text-sm">ou continue com</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
-
-          {/* Google Login */}
-          <button
-            type="button"
-            onClick={() => {
-              localStorage.setItem('user', JSON.stringify({
-                id: 'google-' + Date.now(),
+            <div clasasync () => {
+              try {
+                setLoading(true);
+                await signInWithGoogle();
+              } catch (err: any) {
+                setError('Erro ao fazer login com Google. Tente novamente.');
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-300 transition flex items-center justify-center gap-3 disabled:opacity-70
                 name: 'Usuário Google',
                 email: 'usuario@gmail.com',
                 type: 'freelancer',
