@@ -1,14 +1,25 @@
 ﻿'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter } from 'next/navigation';
 
 interface NavbarProps {
   showAuth?: boolean;
-  user?: { name?: string; email?: string };
-  onLogout?: () => void;
 }
 
-export default function Navbar({ showAuth = true, user, onLogout }: NavbarProps) {
+export default function Navbar({ showAuth = true }: NavbarProps) {
+  const { user, signOut, loading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
       <Link href="/" className="flex items-center gap-3">
@@ -42,7 +53,7 @@ export default function Navbar({ showAuth = true, user, onLogout }: NavbarProps)
         </li>
       </ul>
 
-      {showAuth && !user && (
+      {showAuth && !user && !loading && (
         <div className="flex gap-3">
           <Link 
             href="/login" 
@@ -61,18 +72,16 @@ export default function Navbar({ showAuth = true, user, onLogout }: NavbarProps)
 
       {user && (
         <div className="flex items-center gap-4">
-          <span className="text-gray-600 hidden sm:block">OlÃ¡, {user.name}</span>
+          <span className="text-gray-600 hidden sm:block">Olá, {user.user_metadata?.full_name || user.user_metadata?.name || user.email}</span>
           <Link href="/dashboard" className="px-4 py-2 bg-[#22C55E] text-white rounded-lg hover:bg-[#16A34A] transition">
             Dashboard
           </Link>
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
-            >
-              Sair
-            </button>
-          )}
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition"
+          >
+            Sair
+          </button>
         </div>
       )}
     </nav>
