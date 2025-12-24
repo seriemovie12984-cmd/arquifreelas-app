@@ -49,7 +49,14 @@ export function useAuth() {
 
   const signInWithGoogle = async () => {
     // Prefer an explicit site URL if provided to avoid using localhost from dev sessions
-    const siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : '')
+    let siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : '')
+
+    // Safety fallback: prevent using localhost in production sign-ins (fixes stale local redirects)
+    if (siteOrigin.includes('localhost') || siteOrigin.includes('127.0.0.1')) {
+      // Use production site URL as a safe default
+      siteOrigin = 'https://arquifreelas-app-production.up.railway.app'
+    }
+
     const redirectTo = `${siteOrigin}/auth/callback`
 
     console.log('Starting Google sign-in, redirectTo:', redirectTo)
