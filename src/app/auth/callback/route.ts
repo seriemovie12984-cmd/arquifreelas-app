@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
   if (code) {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
+    
+    // Crear respuesta que podemos modificar
+    const response = NextResponse.redirect(new URL('/dashboard', siteUrl))
     
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,11 +26,14 @@ export async function GET(request: NextRequest) {
           },
           setAll(cookiesToSet) {
             try {
-              cookiesToSet.forEach(({ name, value, options }) =>
+              cookiesToSet.forEach(({ name, value, options }) => {
+                // Establecer en el cookieStore para el servidor
                 cookieStore.set(name, value, options)
-              )
-            } catch {
-              // Handle error silently
+                // Establecer en la respuesta para el cliente
+                response.cookies.set(name, value, options)
+              })
+            } catch (error) {
+              console.error('Error setting cookies:', error)
             }
           },
         },
@@ -35,21 +41,23 @@ export async function GET(request: NextRequest) {
     )
     
     try {
-      const result = await supabase.auth.exchangeCodeForSession(code)
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-      if (result.error) {
-        console.error('Supabase exchange error:', result.error)
-        // Redirect back to login with a short error code for diagnostics
+      if (error) {
+        console.error('Supabase exchange error:', error)
         return NextResponse.redirect(new URL('/login?error=exchange_failed', siteUrl))
       }
 
-      console.log('Supabase exchange success for code source:', request.url)
+      if (data.session) {
+        console.log('Session created successfully for user:', data.session.user.email)
+        return response
+      }
     } catch (err) {
       console.error('Supabase exchange exception:', err)
       return NextResponse.redirect(new URL('/login?error=exchange_exception', siteUrl))
     }
   }
 
-  // URL para redirigir después de login exitoso - usa la URL de producción correcta
-  return NextResponse.redirect(new URL('/dashboard', siteUrl))
+  // Si no hay código, redirigir al login
+  return NextResponse.redirect(new URL('/login', siteUrl))
 }
