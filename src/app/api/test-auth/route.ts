@@ -1,25 +1,30 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
+  const siteUrl = 'https://arquifreelas-app-production.up.railway.app'
+  
   return NextResponse.json({
     timestamp: new Date().toISOString(),
     env_check: {
       SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET',
       SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET',
+      SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ? 'SET' : 'NOT SET',
       url_value: process.env.NEXT_PUBLIC_SUPABASE_URL || 'undefined',
+      site_url_value: process.env.NEXT_PUBLIC_SITE_URL || 'undefined',
     },
-    expected_callback: 'https://v-production-554b.up.railway.app/auth/callback',
+    current_site_url: siteUrl,
+    expected_callback: `${siteUrl}/auth/callback`,
     supabase_callback: 'https://wfmwbvgntfuivbdudsub.supabase.co/auth/v1/callback',
     instructions: {
       step1: 'En Supabase Dashboard > Authentication > URL Configuration:',
-      site_url: 'https://v-production-554b.up.railway.app',
+      site_url: siteUrl,
       redirect_urls: [
-        'https://v-production-554b.up.railway.app/auth/callback',
+        `${siteUrl}/auth/callback`,
         'http://localhost:3000/auth/callback'
       ],
       step2: 'En Google Cloud Console > APIs & Services > Credentials:',
       authorized_js_origins: [
-        'https://v-production-554b.up.railway.app',
+        siteUrl,
         'https://wfmwbvgntfuivbdudsub.supabase.co',
         'http://localhost:3000'
       ],
