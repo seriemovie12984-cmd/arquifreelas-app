@@ -109,21 +109,44 @@ export default function NovoProjetoPage() {
     setUploadedFiles(uploaded);
     setUploading(false);
 
+    // Try to persist to server
+    let persisted = false
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, budget: formData.budget, files: uploaded }),
+      })
+
+      if (res.ok) {
+        persisted = true
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setFileErrors(prev => [...prev, `Servidor: ${err.error || 'Erro ao salvar projeto'}`])
+      }
+    } catch (e) {
+      console.error('Error calling /api/projects', e)
+      setFileErrors(prev => [...prev, 'Não foi possível salvar no servidor. Projeto será salvo localmente.'])
+    }
+
     // Simulate small delay (and keep behaviour backwards compatible with localStorage fallback)
     await new Promise(resolve => setTimeout(resolve, 600));
 
-    const projects = JSON.parse(localStorage.getItem('projects') || '[]');
-    const newProject = {
-      id: Date.now(),
-      ...formData,
-      userId: user?.id,
-      userEmail: user?.email,
-      createdAt: new Date().toISOString(),
-      status: 'aberto',
-      files: uploaded, // array of uploaded files metadata (may be empty if upload failed)
-    };
-    projects.push(newProject);
-    localStorage.setItem('projects', JSON.stringify(projects));
+    // If not persisted server-side, keep a local copy so user doesn't lose data
+    if (!persisted) {
+      const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+      const newProject = {
+        id: Date.now(),
+        ...formData,
+        userId: user?.id,
+        userEmail: user?.email,
+        createdAt: new Date().toISOString(),
+        status: 'aberto',
+        files: uploaded, // array of uploaded files metadata (may be empty if upload failed)
+      };
+      projects.push(newProject);
+      localStorage.setItem('projects', JSON.stringify(projects));
+    }
 
     setSuccess(true);
     setLoading(false);
