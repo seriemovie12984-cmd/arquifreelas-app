@@ -4,12 +4,11 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
+import { useAuth } from '@/hooks/useAuth';
 
-
-type User = { id?: number | string; name?: string; email?: string; type?: string; };
 export default function NovoProjetoPage() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     category: 'residencial',
@@ -23,27 +22,26 @@ export default function NovoProjetoPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
+    // Redirigir al login si no hay usuario autenticado
+    if (!authLoading && !user) {
       router.push('/login');
-      return;
     }
-    setUser(JSON.parse(userData));
-  }, [router]);
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simular criaÃ§Ã£o de projeto
+    // Simular creación de proyecto
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Salvar projeto no localStorage
+    // Guardar proyecto en localStorage (temporal - debería ir a Supabase)
     const projects = JSON.parse(localStorage.getItem('projects') || '[]');
     const newProject = {
       id: Date.now(),
       ...formData,
-      userId: user?.id,
+      userId: user?.id, // Ahora usa el ID de Supabase
+      userEmail: user?.email,
       createdAt: new Date().toISOString(),
       status: 'aberto',
     };
@@ -58,7 +56,7 @@ export default function NovoProjetoPage() {
     }, 2000);
   };
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
