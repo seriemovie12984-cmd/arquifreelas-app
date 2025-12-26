@@ -1,5 +1,8 @@
 'use client';
 
+// Prevent static prerendering - this page requires authentication
+export const dynamic = 'force-dynamic';
+
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
