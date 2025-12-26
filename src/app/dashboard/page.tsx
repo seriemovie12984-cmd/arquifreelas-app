@@ -19,19 +19,14 @@ interface UserProfile {
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading, signOut } = useAuth();
-  const supabase = createClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-      return;
-    }
-
     // Cargar perfil del usuario
     const loadProfile = async () => {
       if (user) {
+        const supabase = createClient();
         const { data } = await supabase
           .from('profiles')
           .select('*')
@@ -44,20 +39,33 @@ export default function DashboardPage() {
       }
     };
 
-    loadProfile();
-  }, [user, loading, router, supabase]);
+    if (!loading && user) {
+      loadProfile();
+    }
+  }, [user, loading]);
 
   const handleLogout = async () => {
-    await signOut();
-    router.push('/');
+    try {
+      await signOut();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    // Forzar recarga completa para limpiar todo el estado
+    window.location.href = '/';
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
       </div>
     );
+  }
+
+  if (!user) {
+    // Redirigir solo si no hay usuario después de cargar
+    router.push('/login');
+    return null;
   }
 
   const userName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario';
