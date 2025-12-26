@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
+  // Only expose full env data in non-production or when explicitly allowed
+  const allowDebug = process.env.ALLOW_DEBUG === 'true'
+  if (process.env.NODE_ENV === 'production' && !allowDebug) {
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 })
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET'
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'NOT SET'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'NOT SET'

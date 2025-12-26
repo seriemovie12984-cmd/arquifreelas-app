@@ -26,6 +26,12 @@ export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<UserProfile[]>([]);
+
+  interface Invoice { id: string; user_id: string; amount: number; status: string; created_at?: string }
+  interface Overview { totalInvoiced: number; totalPaid: number; adminCommission: number; topUsers?: { user_id: string; total: number }[] }
+
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
@@ -61,7 +67,8 @@ export default function AdminPage() {
           .single();
 
         if (profile?.role !== 'admin') {
-          setError('No tienes permisos de administrador');
+          const roleText = profile?.role || 'sin rol'
+          setError(`No tienes permisos de administrador. Rol actual: "${roleText}". Si deberías ser admin, ejecuta en Supabase SQL:\n\nupdate profiles set role = 'admin' where email = '${user.email}';`)
           setLoadingUsers(false);
           return;
         }
@@ -106,6 +113,23 @@ export default function AdminPage() {
     };
 
     fetchUsers();
+
+    // Load admin overview and invoices
+    const fetchOverviewAndInvoices = async () => {
+      try {
+        const [ovRes, invRes] = await Promise.all([
+          fetch('/api/admin/overview'),
+          fetch('/api/admin/invoices/list')
+        ])
+
+        if (ovRes.ok) setOverview(await ovRes.json())
+        if (invRes.ok) setInvoices(await invRes.json())
+      } catch (e) {
+        console.error('Admin fetch error', e)
+      }
+    }
+
+    fetchOverviewAndInvoices()
   }, [user]);
 
   if (loading || loadingUsers) {
@@ -157,7 +181,7 @@ export default function AdminPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Panel de Administración</h1>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -173,11 +197,11 @@ export default function AdminPage() {
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Suscripciones Activas</p>
-                <p className="text-3xl font-bold text-[#22C55E]">{stats.activeSubscriptions}</p>
+                <p className="text-gray-500 text-sm">Total Facturado</p>
+                <p className="text-3xl font-bold text-[#22C55E]">R$ {(overview?.totalInvoiced || 0).toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-2xl">💳</span>
+                <span className="text-2xl">💸</span>
               </div>
             </div>
           </div>
@@ -185,11 +209,23 @@ export default function AdminPage() {
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Nuevos Hoy</p>
-                <p className="text-3xl font-bold text-purple-600">{stats.newToday}</p>
+                <p className="text-gray-500 text-sm">Total Pagado</p>
+                <p className="text-3xl font-bold text-purple-600">R$ {(overview?.totalPaid || 0).toFixed(2)}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-2xl">🆕</span>
+                <span className="text-2xl">✅</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-500 text-sm">Comisión Admin</p>
+                <p className="text-3xl font-bold text-gray-800">R$ {(overview?.adminCommission || 0).toFixed(2)}</p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-2xl">🏦</span>
               </div>
             </div>
           </div>
@@ -292,6 +328,55 @@ export default function AdminPage() {
                           hour: '2-digit',
                           minute: '2-digit'
                         })}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Invoices */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mt-8">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">Facturas</h2>
+            <div className="text-sm text-gray-600">Total: {invoices.length}</div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {invoices.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-12 text-center text-gray-500">Sin facturas</td></tr>
+                ) : (
+                  invoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-700">{String(inv.id).slice(0,8)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{inv.user_id}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">R$ {Number(inv.amount).toFixed(2)}</td>
+                      <td className="px-6 py-4 text-sm">{inv.status}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex gap-2">
+                          <a href={`/invoices/${inv.id}`} className="px-3 py-1 bg-[#22C55E] text-white rounded text-xs">Abrir</a>
+                          <a href={`/api/invoices/${inv.id}/qr`} className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs">QR</a>
+                          {inv.status !== 'paid' && (
+                            <button onClick={async () => {
+                              if (!confirm('Marcar factura como pagada?')) return;
+                              const res = await fetch(`/api/admin/invoices/${inv.id}/pay`, { method: 'POST' })
+                              if (res.ok) { alert('Marcada como pagada'); location.reload() } else { const j = await res.json().catch(() => ({})); alert('Error: ' + (j.error || 'unknown')) }
+                            }} className="px-3 py-1 bg-blue-600 text-white rounded text-xs">Marcar pagada</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
