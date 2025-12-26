@@ -66,5 +66,6 @@ export const config = {
     '/admin/:path*',
     '/login',
     '/cadastro',
+    '/auth/callback',
   ],
 }

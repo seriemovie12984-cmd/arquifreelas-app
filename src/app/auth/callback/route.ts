@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
 
   const cookieStore = await cookies()
   
+  // Crear respuesta para poder establecer cookies
+  const response = NextResponse.redirect(new URL('/dashboard', siteUrl))
+  
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -34,35 +37,25 @@ export async function GET(request: NextRequest) {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options)
-            })
-          } catch (error) {
-            console.error('Error setting cookies:', error)
-          }
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Establecer cookies en la respuesta
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
   )
   
   try {
-    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
     if (exchangeError) {
-      console.error('Supabase exchange error:', exchangeError.message, exchangeError)
+      console.error('Supabase exchange error:', exchangeError.message)
       return NextResponse.redirect(new URL(`/login?error=exchange_failed&message=${encodeURIComponent(exchangeError.message)}`, siteUrl))
     }
 
-    if (!data.session) {
-      console.error('No session returned after exchange')
-      return NextResponse.redirect(new URL('/login?error=no_session', siteUrl))
-    }
-
-    console.log('Session created successfully for user:', data.session.user.email)
-    
-    // Redirigir al dashboard después de login exitoso
-    return NextResponse.redirect(new URL('/dashboard', siteUrl))
+    console.log('Session created successfully')
+    return response
     
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
