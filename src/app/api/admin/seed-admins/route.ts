@@ -22,37 +22,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Supabase service role key missing' }, { status: 500 })
   }
 
-  const supabase = createSupabaseClient(supabaseUrl, serviceKey)
+  const supabase = createSupabaseClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false },
+  })
 
   try {
-    const sql = `update profiles set role = 'admin' where email in (${emails.map(e => `'${e.replace(/'/g, "''")}'`).join(',')})`;
-    // Try raw SQL via psql function if available, otherwise use from().update fallback
-    let rpcError = null
-    try {
-      // Some Supabase projects expose an "sql" RPC for running raw queries; try it if available
-      // Note: Type cast intentionally avoided to satisfy lint rules
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      const rpcRes = await supabase.rpc('sql', { q: sql })
-      if (rpcRes.error) rpcError = rpcRes.error
-    } catch (e) {
-      rpcError = e
+    // Use simple query via from().update() with proper error handling
+    const { data, error: updErr } = await supabase
+      .from('profiles')
+      .update({ role: 'admin' })
+      .in('email', emails)
+
+    if (updErr) {
+      console.error('[seed-admins] Update error:', updErr)
+      return NextResponse.json({ error: 'Update failed', details: updErr.message }, { status: 500 })
     }
 
-    // Fallback to query via from().update if rpc not available or failed
-    if (rpcError) {
-      const { error: updErr } = await supabase
-        .from('profiles')
-        .update({ role: 'admin' })
-        .in('email', emails)
-
-      if (updErr) {
-        return NextResponse.json({ error: 'Update failed', details: updErr.message }, { status: 500 })
-      }
-    }
-
-    return NextResponse.json({ ok: true, emails })
+    console.log('[seed-admins] Successfully marked admins:', emails)
+    return NextResponse.json({ ok: true, emails, data })
   } catch (err) {
+    console.error('[seed-admins] Exception:', err)
     return NextResponse.json({ error: 'exception', details: String(err) }, { status: 500 })
   }
 }
