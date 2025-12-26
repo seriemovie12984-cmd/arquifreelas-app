@@ -26,6 +26,12 @@ export default function NovoProjetoPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key:number]:number}>({});
   const [uploadedFiles, setUploadedFiles] = useState<{name:string,url:string,type:string,size:number}[]>([]);
+  const [fileErrors, setFileErrors] = useState<string[]>([]);
+
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB per file
+  const MAX_FILES = 10; // max files per project
+  const ALLOWED_TYPES = ['image/', 'application/pdf']; // prefix match for allowed types
+
 
   useEffect(() => {
     setMounted(true);
@@ -37,29 +43,53 @@ export default function NovoProjetoPage() {
     }
   }, [authLoading, user, mounted]);
 
+  // cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      previews.forEach(p => {
+        if (p.url) URL.revokeObjectURL(p.url);
+      });
+    };
+  }, [previews]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submit if uploading or if validation errors
+    if (uploading) return;
+    if (fileErrors.length > 0) {
+      alert('Existem erros nos anexos. Corrija-os antes de publicar.');
+      return;
+    }
+
     setLoading(true);
 
     // If files selected, upload them to Supabase Storage
     setUploading(true);
     const uploaded: {name:string,url:string,type:string,size:number}[] = [];
+    const uploadErrors: string[] = [];
 
     if (selectedFiles.length > 0) {
       const supabase = await createClient();
       if (!supabase) {
         // Couldn't create client in this runtime, warn and continue storing names locally
-        console.warn('Supabase client not available; files will not be uploaded')
+        console.warn('Supabase client not available; files will not be uploaded');
+        setFileErrors(prev => [...prev, 'Supabase não disponível: os arquivos não serão enviados (serão referenciados apenas localmente).']);
       } else {
         for (let i = 0; i < selectedFiles.length; i++) {
           const file = selectedFiles[i];
           try {
-            const path = `project-files/${user?.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-_]/g, '_')}`;
+            const safeName = file.name.replace(/[^a-zA-Z0-9.-_]/g, '_');
+            const path = `project-files/${user?.id}/${Date.now()}_${safeName}`;
+
             const { error: uploadError } = await supabase.storage.from('project-files').upload(path, file);
             if (uploadError) {
               console.error('Upload error:', uploadError.message);
+              uploadErrors.push(`${file.name}: ${uploadError.message}`);
+              setUploadProgress(prev => ({ ...prev, [i]: 0 }));
               continue;
             }
+
             const { data } = supabase.storage.from('project-files').getPublicUrl(path);
             uploaded.push({ name: file.name, url: data.publicUrl, type: file.type, size: file.size });
 
@@ -67,8 +97,12 @@ export default function NovoProjetoPage() {
             setUploadProgress(prev => ({ ...prev, [i]: 100 }));
           } catch (err) {
             console.error('Exception uploading file:', err);
+            uploadErrors.push(`${file.name}: upload failed`);
+            setUploadProgress(prev => ({ ...prev, [i]: 0 }));
           }
         }
+
+        if (uploadErrors.length) setFileErrors(prev => [...prev, ...uploadErrors]);
       }
     }
 
@@ -86,7 +120,7 @@ export default function NovoProjetoPage() {
       userEmail: user?.email,
       createdAt: new Date().toISOString(),
       status: 'aberto',
-      files: uploaded, // array of uploaded files metadata
+      files: uploaded, // array of uploaded files metadata (may be empty if upload failed)
     };
     projects.push(newProject);
     localStorage.setItem('projects', JSON.stringify(projects));
@@ -250,17 +284,48 @@ export default function NovoProjetoPage() {
                 accept="image/*,application/pdf"
                 multiple
                 onChange={(e) => {
+                  setFileErrors([]);
                   const files = Array.from(e.target.files || []);
-                  setSelectedFiles(files);
-                  const p = files.map((f, i) => ({ id: Date.now() + i, name: f.name, url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined, type: f.type, size: f.size }));
-                  setPreviews(p);
+
+                  // Validation: total files
+                  if (selectedFiles.length + files.length > MAX_FILES) {
+                    setFileErrors(prev => [...prev, `Limite de arquivos: máximo ${MAX_FILES}.`]);
+                    return;
+                  }
+
+                  const validFiles: File[] = [];
+                  const errors: string[] = [];
+
+                  files.forEach((f) => {
+                    const isAllowed = ALLOWED_TYPES.some(t => f.type.startsWith(t));
+                    if (!isAllowed) {
+                      errors.push(`${f.name}: tipo não suportado.`);
+                      return;
+                    }
+                    if (f.size > MAX_FILE_SIZE) {
+                      errors.push(`${f.name}: excede o tamanho máximo de ${Math.round(MAX_FILE_SIZE/1024/1024)}MB.`);
+                      return;
+                    }
+                    validFiles.push(f);
+                  });
+
+                  if (errors.length) setFileErrors(prev => [...prev, ...errors]);
+
+                  if (validFiles.length === 0) return;
+
+                  const nextFiles = [...selectedFiles, ...validFiles];
+                  setSelectedFiles(nextFiles);
+
+                  // Add previews for new files (keep old previews)
+                  const newPreviews = validFiles.map((f, i) => ({ id: Date.now() + i, name: f.name, url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined, type: f.type, size: f.size }));
+                  setPreviews(prev => [...prev, ...newPreviews]);
                 }}
                 className="block"
               />
 
               {previews.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-4">
-                  {previews.map((p, idx) => (
+                  {previews.map((p, j) => { const pr = uploadProgress[j] || 0; return (
                     <div key={p.id} className="bg-white p-2 rounded-xl border border-gray-100">
                       {p.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -269,18 +334,40 @@ export default function NovoProjetoPage() {
                         <div className="w-full h-28 flex items-center justify-center text-sm text-gray-600">{p.name}</div>
                       )}
                       <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                        <span className="truncate">{p.name}</span>
+                        <span className="truncate max-w-[70%]">{p.name}</span>
                         <span>{Math.round(p.size/1024)} KB</span>
                       </div>
 
-                      <div className="mt-2">
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div className="bg-[#22C55E] h-2 rounded-full" style={{ width: `${uploadProgress[idx] || 0}%` }} />
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <div className="w-full bg-gray-100 rounded-full h-2">
+                            <div className="bg-[#22C55E] h-2 rounded-full" style={{ width: `${pr}%` }} />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{pr ? `${pr}%` : 'Pendente'}</div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">{uploadProgress[idx] ? `${uploadProgress[idx]}%` : 'Pendente'}</div>
+                        <button type="button" onClick={() => {
+                          // remove preview and corresponding selected file
+                          setPreviews(prev => prev.filter(x => x.id !== p.id));
+                          setSelectedFiles(prev => {
+                            const idxToRemove = prev.findIndex(f => f.name === p.name && f.size === p.size);
+                            if (idxToRemove === -1) return prev;
+                            const copy = [...prev];
+                            copy.splice(idxToRemove,1);
+                            return copy;
+                          });
+                        }} className="px-2 py-1 bg-red-100 text-red-600 rounded text-xs">Remover</button>
                       </div>
                     </div>
-                  ))}
+                  ); })}
+                </div>
+              )}
+
+              {fileErrors.length > 0 && (
+                <div className="mt-4 bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-md">
+                  <div className="font-semibold mb-2">Erros nos anexos:</div>
+                  <ul className="text-sm list-disc pl-5 space-y-1">
+                    {fileErrors.map((err, i) => (<li key={i}>{err}</li>))}
+                  </ul>
                 </div>
               )}
 
@@ -317,7 +404,7 @@ export default function NovoProjetoPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="w-full py-4 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl font-bold hover:shadow-lg transition disabled:opacity-70 text-lg flex items-center justify-center gap-2"
             >
               {loading ? (
