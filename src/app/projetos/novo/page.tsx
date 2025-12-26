@@ -24,9 +24,11 @@ export default function NovoProjetoPage() {
   useEffect(() => {
     // Redirigir al login si no hay usuario autenticado
     if (!authLoading && !user) {
-      window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

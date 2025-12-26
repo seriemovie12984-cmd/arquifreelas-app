@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -17,7 +16,6 @@ interface UserProfile {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user, loading, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -50,10 +48,13 @@ export default function DashboardPage() {
     } catch (e) {
       console.error('Logout error:', e);
     }
-    // Forzar recarga completa para limpiar todo el estado
-    window.location.href = '/';
+    // Forzar recarga completa para limpiar todo el estado y cookies
+    if (typeof window !== 'undefined') {
+      window.location.replace('/');
+    }
   };
 
+  // Mostrar loading mientras se verifica la sesión
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -62,9 +63,11 @@ export default function DashboardPage() {
     );
   }
 
+  // Si no hay usuario después de cargar, redirigir
   if (!user) {
-    // Redirigir solo si no hay usuario después de cargar
-    router.push('/login');
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login');
+    }
     return null;
   }
 

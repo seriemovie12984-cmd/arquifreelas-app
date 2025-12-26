@@ -1,24 +1,31 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  
-  // Memoizar el cliente para evitar recrearlo en cada render
-  const supabase = useMemo(() => createClient(), [])
+  const initialized = useRef(false)
 
   useEffect(() => {
+    // Evitar doble inicialización en StrictMode
+    if (initialized.current) return
+    initialized.current = true
+
+    const supabase = createClient()
+    
     // Obtener sesión inicial
     const getSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+        }
         setUser(session?.user ?? null)
       } catch (err) {
-        console.error('Error getting session:', err)
+        console.error('Exception getting session:', err)
         setUser(null)
       } finally {
         setLoading(false)
@@ -31,23 +38,20 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('Auth state changed:', _event, session?.user?.email)
       setUser(session?.user ?? null)
       setLoading(false)
 
       // Crear o actualizar perfil cuando el usuario se autentica
       if (session?.user && _event === 'SIGNED_IN') {
         try {
-          const { error } = await supabase.from('profiles').upsert({
+          await supabase.from('profiles').upsert({
             id: session.user.id,
             email: session.user.email,
             full_name: session.user.user_metadata.full_name || session.user.user_metadata.name,
             avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture,
             provider: session.user.app_metadata.provider,
           })
-
-          if (error) {
-            console.error('Error updating profile:', error)
-          }
         } catch (err) {
           console.error('Profile upsert error:', err)
         }
@@ -57,35 +61,23 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [supabase])
+  }, [])
 
-  const signInWithGoogle = async () => {
-    // Prefer an explicit site URL if provided to avoid using localhost from dev sessions
-    let siteOrigin = (process.env.NEXT_PUBLIC_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : '')
-
-    // Safety fallback: prevent using localhost in production sign-ins (fixes stale local redirects)
-    if (siteOrigin.includes('localhost') || siteOrigin.includes('127.0.0.1')) {
-      // Use production site URL as a safe default
-      siteOrigin = 'https://arquifreelas-app-production.up.railway.app'
-    }
-
-    const redirectTo = `${siteOrigin}/auth/callback`
+  const signInWithGoogle = useCallback(async () => {
+    const supabase = createClient()
+    
+    // Usar la URL actual del navegador para el redirect
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
+    const redirectTo = `${currentOrigin}/auth/callback`
 
     console.log('Starting Google sign-in, redirectTo:', redirectTo)
-
-    // Si ya hay una sesión, cerrarla primero para permitir cambiar de cuenta
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      console.log('Existing session found, signing out first...')
-      await supabase.auth.signOut()
-    }
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
         queryParams: {
-          prompt: 'select_account', // Forzar a Google a mostrar el selector de cuentas
+          prompt: 'select_account',
         },
       },
     })
@@ -94,23 +86,18 @@ export function useAuth() {
       console.error('Error signing in:', error)
       throw error
     }
-  }
+  }, [])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    const supabase = createClient()
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('Error signing out:', error)
-        throw error
-      }
-      // Limpiar el estado local inmediatamente
+      await supabase.auth.signOut()
       setUser(null)
     } catch (err) {
       console.error('Sign out error:', err)
-      // Forzar limpieza del estado incluso si hay error
       setUser(null)
     }
-  }
+  }, [])
 
   return {
     user,
