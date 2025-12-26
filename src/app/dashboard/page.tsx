@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Icons } from '@/components/Icons';
@@ -87,7 +88,7 @@ export default function DashboardPage() {
         </a>
         <div className="flex items-center gap-4">
           {userAvatar && (
-            <img src={userAvatar} alt="" className="w-10 h-10 rounded-full" />
+            <Image src={userAvatar} alt="" width={40} height={40} className="w-10 h-10 rounded-full" />
           )}
           <span className="text-gray-600">Ola, <span className="font-semibold">{userName}</span></span>
           {profile?.role === 'admin' && (
@@ -233,7 +234,7 @@ export default function DashboardPage() {
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <div className="flex items-center gap-6 mb-6">
                   {userAvatar ? (
-                    <img src={userAvatar} alt="" className="w-24 h-24 rounded-2xl shadow-lg" />
+                    <Image src={userAvatar} alt="" width={96} height={96} className="w-24 h-24 rounded-2xl shadow-lg" />
                   ) : (
                     <div className="w-24 h-24 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg">
                       {userName?.charAt(0).toUpperCase()}
