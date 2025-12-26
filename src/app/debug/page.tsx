@@ -21,8 +21,12 @@ export default function DebugPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const supabase = createClient();
-        
+        const supabase = await createClient();
+        if (!supabase) {
+          setDebugInfo(prev => ({ ...prev, error: 'Supabase client unavailable' }))
+          return
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
         
         setDebugInfo({

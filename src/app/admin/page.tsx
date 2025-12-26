@@ -25,7 +25,6 @@ interface UserProfile {
 export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const supabase = createClient();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +43,14 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchUsers = async () => {
       if (!user) return;
+
+      // Crear cliente Supabase de forma segura en tiempo de ejecución (solo navegador)
+      const supabase = await createClient();
+      if (!supabase) {
+        setError('Imposible conectar con Supabase en este entorno');
+        setLoadingUsers(false);
+        return;
+      }
 
       try {
         // Verificar si el usuario es admin
@@ -99,7 +106,7 @@ export default function AdminPage() {
     };
 
     fetchUsers();
-  }, [user, supabase]);
+  }, [user]);
 
   if (loading || loadingUsers) {
     return (

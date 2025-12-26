@@ -28,7 +28,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadProfile = async () => {
       if (user) {
-        const supabase = createClient();
+        const supabase = await createClient();
+        if (!supabase) {
+          console.warn('Supabase client not available in this runtime');
+          return;
+        }
+
         const { data } = await supabase
           .from('profiles')
           .select('*')
