@@ -33,6 +33,30 @@ export async function POST(request: Request) {
   })
 
   try {
+    // First, ensure the profiles table exists by creating it if needed
+    const createTableSQL = `
+      create table if not exists public.profiles (
+        id uuid not null primary key references auth.users on delete cascade,
+        email text unique,
+        full_name text,
+        avatar_url text,
+        role text default 'user',
+        created_at timestamptz default now(),
+        updated_at timestamptz default now()
+      );
+      alter table public.profiles enable row level security;
+    `
+    
+    // Try to create table first (via RPC if available, otherwise ignore)
+    try {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      await supabase.rpc('sql', { q: createTableSQL })
+    } catch {
+      // RPC might not exist, that's ok - table might already exist
+      console.log('[seed-admins] RPC sql not available, proceeding with update')
+    }
+
     // Use simple query via from().update() with proper error handling
     const { data, error: updErr } = await supabase
       .from('profiles')
