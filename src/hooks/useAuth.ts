@@ -1,20 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  
+  // Memoizar el cliente para evitar recrearlo en cada render
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     // Obtener sesión inicial
     const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setUser(session?.user ?? null)
+      } catch (err) {
+        console.error('Error getting session:', err)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
 
     getSession()
@@ -28,16 +36,20 @@ export function useAuth() {
 
       // Crear o actualizar perfil cuando el usuario se autentica
       if (session?.user && _event === 'SIGNED_IN') {
-        const { error } = await supabase.from('profiles').upsert({
-          id: session.user.id,
-          email: session.user.email,
-          full_name: session.user.user_metadata.full_name || session.user.user_metadata.name,
-          avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture,
-          provider: session.user.app_metadata.provider,
-        })
+        try {
+          const { error } = await supabase.from('profiles').upsert({
+            id: session.user.id,
+            email: session.user.email,
+            full_name: session.user.user_metadata.full_name || session.user.user_metadata.name,
+            avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture,
+            provider: session.user.app_metadata.provider,
+          })
 
-        if (error) {
-          console.error('Error updating profile:', error)
+          if (error) {
+            console.error('Error updating profile:', error)
+          }
+        } catch (err) {
+          console.error('Profile upsert error:', err)
         }
       }
     })
