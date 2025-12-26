@@ -64,8 +64,9 @@ export async function GET(request: NextRequest) {
     // Redirigir al dashboard después de login exitoso
     return NextResponse.redirect(new URL('/dashboard', siteUrl))
     
-  } catch (err: any) {
-    console.error('Supabase exchange exception:', err.message || err)
-    return NextResponse.redirect(new URL(`/login?error=exception&message=${encodeURIComponent(err.message || 'Unknown error')}`, siteUrl))
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    console.error('Supabase exchange exception:', errorMessage)
+    return NextResponse.redirect(new URL(`/login?error=exception&message=${encodeURIComponent(errorMessage)}`, siteUrl))
   }
 }
