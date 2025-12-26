@@ -19,9 +19,13 @@ export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Cargar perfil del usuario
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const loadProfile = async () => {
       if (user) {
         const supabase = createClient();
@@ -37,10 +41,16 @@ export default function DashboardPage() {
       }
     };
 
-    if (!loading && user) {
+    if (mounted && !loading && user) {
       loadProfile();
     }
-  }, [user, loading]);
+  }, [user, loading, mounted]);
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      window.location.href = '/login';
+    }
+  }, [mounted, loading, user]);
 
   const handleLogout = async () => {
     try {
@@ -48,14 +58,10 @@ export default function DashboardPage() {
     } catch (e) {
       console.error('Logout error:', e);
     }
-    // Forzar recarga completa para limpiar todo el estado y cookies
-    if (typeof window !== 'undefined') {
-      window.location.replace('/');
-    }
+    window.location.href = '/';
   };
 
-  // Mostrar loading mientras se verifica la sesión
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
@@ -63,11 +69,7 @@ export default function DashboardPage() {
     );
   }
 
-  // Si no hay usuario después de cargar, redirigir
   if (!user) {
-    if (typeof window !== 'undefined') {
-      window.location.replace('/login');
-    }
     return null;
   }
 
@@ -76,26 +78,25 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-gray-100">
-      {/* Navigation */}
       <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-3">
+        <a href="/" className="flex items-center gap-3">
           <div className="w-11 h-11 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">
             AF
           </div>
           <span className="text-2xl font-bold text-gray-800">ArquiFreelas</span>
-        </Link>
+        </a>
         <div className="flex items-center gap-4">
           {userAvatar && (
             <img src={userAvatar} alt="" className="w-10 h-10 rounded-full" />
           )}
-          <span className="text-gray-600">Olá, <span className="font-semibold">{userName}</span></span>
+          <span className="text-gray-600">Ola, <span className="font-semibold">{userName}</span></span>
           {profile?.role === 'admin' && (
-            <Link
+            <a
               href="/admin"
               className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-medium"
             >
               Admin
-            </Link>
+            </a>
           )}
           <button
             onClick={handleLogout}
@@ -107,14 +108,13 @@ export default function DashboardPage() {
       </nav>
 
       <div className="flex">
-        {/* Sidebar */}
         <aside className="w-64 bg-white shadow-lg min-h-[calc(100vh-72px)] p-6">
           <nav className="space-y-2">
             <button
               onClick={() => setActiveTab('overview')}
               className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${activeTab === 'overview' ? 'bg-[#22C55E]/10 text-[#22C55E]' : 'hover:bg-gray-100 text-gray-600'}`}
             >
-              <Icons.Chart /> VisÃ£o Geral
+              <Icons.Chart /> Visao Geral
             </button>
             <button
               onClick={() => setActiveTab('projects')}
@@ -146,22 +146,20 @@ export default function DashboardPage() {
             >
               <Icons.User /> Meu Perfil
             </button>
-            <Link
+            <a
               href="/projetos/novo"
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl hover:shadow-lg transition mt-6 font-semibold"
             >
               <Icons.Plus /> Novo Projeto
-            </Link>
+            </a>
           </nav>
         </aside>
 
-        {/* Main Content */}
         <div className="flex-1 p-8">
           {activeTab === 'overview' && (
             <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-8">VisÃ£o Geral</h1>
+              <h1 className="text-3xl font-bold text-gray-800 mb-8">Visao Geral</h1>
               
-              {/* Stats Cards */}
               <div className="grid md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-sm">Projetos Ativos</p>
@@ -176,15 +174,14 @@ export default function DashboardPage() {
                   <p className="text-3xl font-bold text-blue-500">0</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                  <p className="text-gray-500 text-sm">Ganhos do MÃªs</p>
+                  <p className="text-gray-500 text-sm">Ganhos do Mes</p>
                   <p className="text-3xl font-bold text-[#22C55E]">R$ 0</p>
                 </div>
               </div>
 
-              {/* Recent Projects */}
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <h2 className="text-xl font-semibold mb-4">Projetos Recentes</h2>
-                <p className="text-gray-500 text-center py-8">Você ainda não tem projetos. Crie seu primeiro projeto!</p>
+                <p className="text-gray-500 text-center py-8">Voce ainda nao tem projetos. Crie seu primeiro projeto!</p>
               </div>
             </div>
           )}
@@ -193,12 +190,12 @@ export default function DashboardPage() {
             <div>
               <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-800">Meus Projetos</h1>
-                <Link href="/projetos/novo" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl hover:shadow-lg transition font-semibold">
+                <a href="/projetos/novo" className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white rounded-xl hover:shadow-lg transition font-semibold">
                   <Icons.Plus /> Novo Projeto
-                </Link>
+                </a>
               </div>
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-                <p className="text-gray-500 text-center py-8">VocÃª ainda nÃ£o tem projetos. Crie seu primeiro projeto!</p>
+                <p className="text-gray-500 text-center py-8">Voce ainda nao tem projetos. Crie seu primeiro projeto!</p>
               </div>
             </div>
           )}
@@ -255,24 +252,23 @@ export default function DashboardPage() {
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {profile.subscription_status === 'active' ? '✓ Premium' : profile.subscription_status}
+                          {profile.subscription_status === 'active' ? 'Premium' : profile.subscription_status}
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
                 
-                {/* Upgrade to Premium */}
                 {profile?.subscription_status !== 'active' && (
                   <div className="mt-6 p-4 bg-gradient-to-r from-[#22C55E]/10 to-[#16A34A]/10 rounded-xl border border-[#22C55E]/20">
-                    <h3 className="font-semibold text-gray-800 mb-2">🚀 Upgrade para Premium</h3>
+                    <h3 className="font-semibold text-gray-800 mb-2">Upgrade para Premium</h3>
                     <p className="text-gray-600 text-sm mb-4">Acesse recursos exclusivos e aumente suas chances de conseguir projetos.</p>
-                    <Link 
+                    <a 
                       href="/planos"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-[#22C55E] text-white rounded-lg hover:bg-[#16A34A] transition"
                     >
                       Ver Planos
-                    </Link>
+                    </a>
                   </div>
                 )}
               </div>

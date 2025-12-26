@@ -2,12 +2,10 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/Icons';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function NovoProjetoPage() {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
@@ -20,29 +18,29 @@ export default function NovoProjetoPage() {
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Redirigir al login si no hay usuario autenticado
-    if (!authLoading && !user) {
-      if (typeof window !== 'undefined') {
-        window.location.replace('/login');
-      }
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !authLoading && !user) {
+      window.location.href = '/login';
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simular creación de proyecto
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Guardar proyecto en localStorage (temporal - debería ir a Supabase)
     const projects = JSON.parse(localStorage.getItem('projects') || '[]');
     const newProject = {
       id: Date.now(),
       ...formData,
-      userId: user?.id, // Ahora usa el ID de Supabase
+      userId: user?.id,
       userEmail: user?.email,
       createdAt: new Date().toISOString(),
       status: 'aberto',
@@ -54,11 +52,11 @@ export default function NovoProjetoPage() {
     setLoading(false);
     
     setTimeout(() => {
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     }, 2000);
   };
 
-  if (authLoading) {
+  if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#22C55E]"></div>
@@ -67,12 +65,11 @@ export default function NovoProjetoPage() {
   }
 
   if (!user) {
-    return null; // El useEffect se encargará de redirigir
+    return null;
   }
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Navigation */}
       <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center gap-3">
           <div className="w-11 h-11 bg-gradient-to-br from-[#22C55E] to-[#16A34A] rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg">
@@ -80,9 +77,9 @@ export default function NovoProjetoPage() {
           </div>
           <span className="text-2xl font-bold text-gray-800">ArquiFreelas</span>
         </Link>
-        <Link href="/dashboard" className="text-[#22C55E] hover:text-[#16A34A] font-medium transition flex items-center gap-2">
-          â† Voltar ao Dashboard
-        </Link>
+        <a href="/dashboard" className="text-[#22C55E] hover:text-[#16A34A] font-medium transition flex items-center gap-2">
+          &larr; Voltar ao Dashboard
+        </a>
       </nav>
 
       <div className="max-w-3xl mx-auto py-12 px-6">
@@ -100,14 +97,14 @@ export default function NovoProjetoPage() {
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-6 border border-gray-100">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                TÃ­tulo do Projeto *
+                Titulo do Projeto *
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition"
-                placeholder="Ex: Reforma de apartamento de 80mÂ²"
+                placeholder="Ex: Reforma de apartamento de 80m2"
                 required
               />
             </div>
@@ -126,22 +123,22 @@ export default function NovoProjetoPage() {
                   <option value="residencial">Residencial</option>
                   <option value="comercial">Comercial</option>
                   <option value="industrial">Industrial</option>
-                  <option value="saude">SaÃºde</option>
-                  <option value="educacao">EducaÃ§Ã£o</option>
+                  <option value="saude">Saude</option>
+                  <option value="educacao">Educacao</option>
                   <option value="retail">Retail</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  LocalizaÃ§Ã£o *
+                  Localizacao *
                 </label>
                 <input
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                   className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition"
-                  placeholder="Ex: SÃ£o Paulo, SP"
+                  placeholder="Ex: Sao Paulo, SP"
                   required
                 />
               </div>
@@ -149,13 +146,13 @@ export default function NovoProjetoPage() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                DescriÃ§Ã£o do Projeto *
+                Descricao do Projeto *
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition h-32 resize-none"
-                placeholder="Descreva detalhadamente o que vocÃª precisa..."
+                placeholder="Descreva detalhadamente o que voce precisa..."
                 required
               />
             </div>
@@ -163,7 +160,7 @@ export default function NovoProjetoPage() {
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  OrÃ§amento (R$) *
+                  Orcamento (R$) *
                 </label>
                 <input
                   type="number"
@@ -192,20 +189,20 @@ export default function NovoProjetoPage() {
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Requisitos EspecÃ­ficos
+                Requisitos Especificos
               </label>
               <textarea
                 value={formData.requirements}
                 onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
                 className="w-full px-4 py-3.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#22C55E] focus:border-transparent transition h-24 resize-none"
-                placeholder="CertificaÃ§Ãµes necessÃ¡rias, experiÃªncia especÃ­fica, etc."
+                placeholder="Certificacoes necessarias, experiencia especifica, etc."
               />
             </div>
 
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
               <Icons.Shield />
               <p className="text-amber-800 text-sm">
-                <strong>Taxa da plataforma:</strong> 12% do valor do projeto serÃ¡ retido como comissÃ£o.
+                <strong>Taxa da plataforma:</strong> 12% do valor do projeto sera retido como comissao.
               </p>
             </div>
 
