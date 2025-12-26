@@ -61,10 +61,20 @@ export function useAuth() {
 
     console.log('Starting Google sign-in, redirectTo:', redirectTo)
 
+    // Si ya hay una sesión, cerrarla primero para permitir cambiar de cuenta
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      console.log('Existing session found, signing out first...')
+      await supabase.auth.signOut()
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
+        queryParams: {
+          prompt: 'select_account', // Forzar a Google a mostrar el selector de cuentas
+        },
       },
     })
 
