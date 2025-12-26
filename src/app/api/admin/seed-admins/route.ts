@@ -19,7 +19,13 @@ export async function POST(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
-    return NextResponse.json({ error: 'Supabase service role key missing' }, { status: 500 })
+    console.error('[seed-admins] Missing env vars', { 
+      hasUrl: !!supabaseUrl, 
+      hasKey: !!serviceKey,
+      urlPreview: supabaseUrl?.substring(0, 30),
+      keyPreview: serviceKey?.substring(0, 30)
+    })
+    return NextResponse.json({ error: 'Supabase service role key missing', hasUrl: !!supabaseUrl, hasKey: !!serviceKey }, { status: 500 })
   }
 
   const supabase = createSupabaseClient(supabaseUrl, serviceKey, {
