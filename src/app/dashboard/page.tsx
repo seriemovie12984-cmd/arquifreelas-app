@@ -154,46 +154,26 @@ export default function DashboardPage() {
               <div className="grid md:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-sm">Projetos Ativos</p>
-                  <p className="text-3xl font-bold text-[#22C55E]">3</p>
+                  <p className="text-3xl font-bold text-[#22C55E]">0</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-sm">Propostas Pendentes</p>
-                  <p className="text-3xl font-bold text-orange-500">5</p>
+                  <p className="text-3xl font-bold text-orange-500">0</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-sm">Mensagens</p>
-                  <p className="text-3xl font-bold text-blue-500">12</p>
+                  <p className="text-3xl font-bold text-blue-500">0</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-sm">Ganhos do MÃªs</p>
-                  <p className="text-3xl font-bold text-[#22C55E]">R$ 8.500</p>
+                  <p className="text-3xl font-bold text-[#22C55E]">R$ 0</p>
                 </div>
               </div>
 
               {/* Recent Projects */}
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <h2 className="text-xl font-semibold mb-4">Projetos Recentes</h2>
-                <div className="space-y-4">
-                  {[
-                    { title: 'Reforma de Apartamento', status: 'Em andamento', price: 'R$ 5.000' },
-                    { title: 'Projeto de EscritÃ³rio', status: 'Aguardando aprovaÃ§Ã£o', price: 'R$ 15.000' },
-                    { title: 'Casa de Praia', status: 'ConcluÃ­do', price: 'R$ 25.000' },
-                  ].map((project, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition cursor-pointer">
-                      <div>
-                        <p className="font-semibold text-gray-800">{project.title}</p>
-                        <span className={`text-sm px-3 py-1 rounded-full ${
-                          project.status === 'ConcluÃ­do' ? 'bg-green-100 text-green-700' :
-                          project.status === 'Em andamento' ? 'bg-blue-100 text-blue-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {project.status}
-                        </span>
-                      </div>
-                      <span className="font-bold text-[#22C55E] text-lg">{project.price}</span>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-gray-500 text-center py-8">Você ainda não tem projetos. Crie seu primeiro projeto!</p>
               </div>
             </div>
           )}
