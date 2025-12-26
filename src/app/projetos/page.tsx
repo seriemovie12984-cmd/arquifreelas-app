@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Icons } from '@/components/Icons';
 
 // Imágenes de Unsplash sin derechos de autor
@@ -15,7 +15,19 @@ const projectImages = [
   'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&q=80', // Oficina
 ];
 
-const projects = [
+interface ProjectItem {
+  id: number | string;
+  title: string;
+  category: string;
+  price: string;
+  location: string;
+  description: string;
+  image: string;
+  deadline: string;
+  files?: { name: string; url: string; type?: string; size?: number }[];
+}
+
+const projects: ProjectItem[] = [
   {
     id: 1,
     title: 'Reforma de Apartamento Luxo',
@@ -81,8 +93,40 @@ const projects = [
 export default function ProjetosPage() {
   const [filter, setFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [projectsList, setProjectsList] = useState<ProjectItem[]>(projects);
 
-  const filteredProjects = projects.filter(project => {
+  // Load user-created projects from localStorage (client-side only)
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('projects') || '[]') as unknown[];
+      if (Array.isArray(stored) && stored.length > 0) {
+        // Normalize stored projects to same shape as sample projects
+        const normalized = stored.map((p: unknown) => {
+          const obj = p as Record<string, unknown>;
+          const files = (obj['files'] as unknown[]) || [];
+          const firstImage = files.length > 0 && (files[0] as Record<string, unknown>)['type'] && String((files[0] as Record<string, unknown>)['type']).startsWith('image/') ? (files[0] as Record<string, unknown>)['url'] as string : projectImages[0];
+
+          return {
+            id: obj['id'] as string | number,
+            title: (obj['title'] as string) || 'Untitled',
+            category: (obj['category'] as string) || 'Residencial',
+            price: obj['budget'] ? `R$ ${(obj['budget'] as string)}` : 'Sem orçamento',
+            location: (obj['location'] as string) || 'Remoto',
+            description: (obj['description'] as string) || '',
+            image: firstImage,
+            deadline: (obj['deadline'] as string) || 'N/A',
+            files: files as { name: string; url: string; type?: string; size?: number }[],
+          };
+        });
+
+        setProjectsList(prev => [...normalized, ...prev]);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const filteredProjects = projectsList.filter(project => {
     const matchesFilter = filter === 'todos' || project.category.toLowerCase() === filter;
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           project.location.toLowerCase().includes(searchTerm.toLowerCase());
